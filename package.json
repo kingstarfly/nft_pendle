@@ -13,7 +13,7 @@
     "test": "yarn compile && yarn hardhat test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.3.2"
+    "@openzeppelin/contracts": "^4.3.3"
   },
   "devDependencies": {
     "@commitlint/cli": "^13.1.0",
