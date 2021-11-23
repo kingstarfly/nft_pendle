@@ -16,6 +16,12 @@ contract ExampleNft is ERC721URIStorage {
     // ERC721 internal _pendlePartnerNftToken;
     string public pendlePartnerBaseUri;
 
+    // map user addresses to the NFT Token IDs they own
+    mapping(address=>uint256[]) public addressToTokenIds;
+
+    // map Token IDs to tier 
+    mapping(uint256=>uint256) public tokenIDToTier;
+
     // Constructor
     constructor(string memory _pendlePartnerBaseUri) ERC721('ExampleNft', 'ET') {
         // _pendlePartnerNftToken = ERC721(_pendlePartnerNftAddress);
@@ -39,9 +45,33 @@ contract ExampleNft is ERC721URIStorage {
             _tokenIds.increment();
         
             uint256 newItemId = _tokenIds.current();
-            _mint(user, newItemId);
-            _setTokenURI(newItemId, _concatenate(pendlePartnerBaseUri, _uint2str(tier)));   
+            // _mint(user, newItemId);
+            // _setTokenURI(newItemId, _concatenate(pendlePartnerBaseUri, _uint2str(tier)));   
+            addressToTokenIds[user].push(newItemId);
+            tokenIDToTier[newItemId] = tier;
         }
+    }
+
+    function getUserNftTierCounts(address user) public view returns (uint256[] memory) {
+        uint256[] memory tierCounts = new uint256[](3);
+
+        // check if the user exists in the mapping at the moment. If not, return default array
+        if (addressToTokenIds[user].length == 0) {
+            for (uint256 i=0; i < tierCounts.length; i++) {
+                tierCounts[i] = 0;
+            }
+            // tierCounts = [0,0,0];
+            return tierCounts;
+        }
+        
+        uint256[] storage userTokenIds = addressToTokenIds[user];
+
+        for (uint256 i=0; i < userTokenIds.length; i++) {
+            uint256 curTokenTier = tokenIDToTier[userTokenIds[i]];
+            tierCounts[curTokenTier - 1]++;
+        }
+
+        return tierCounts; // Return [qty1, qty2, qty3]
     }
 
     /*

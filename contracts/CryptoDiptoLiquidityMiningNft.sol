@@ -20,15 +20,28 @@ contract CryptoDiptoLiquidityMiningNft {
     using SafeERC20 for IERC20;
 
     // ================================= CryptoDipto functions for NFT Rewards =================================
-    address public immutable pendlePartnerNftAddress;
-    address public immutable pendleTokenAddress;
+    address public pendlePartnerNftAddress;
+    address public pendleTokenAddress;
+    address public owner;
 
     mapping(address => uint256) public userBalances;
 
+    modifier onlyOwner() {
+        require(msg.sender == owner, 'Not owner');
+        _;
+    }
+
     // Constructor
-    constructor(address _pendlePartnerNftAddress, address _pendleTokenAddress) {
-        pendlePartnerNftAddress = _pendlePartnerNftAddress;
-        pendleTokenAddress = _pendleTokenAddress;
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function setERC721Address(address tokenAddr) public onlyOwner {
+        pendlePartnerNftAddress = tokenAddr;
+    }
+
+    function setERC20Address(address tokenAddr) public onlyOwner {
+        pendleTokenAddress = tokenAddr;
     }
 
     /**
@@ -60,9 +73,9 @@ contract CryptoDiptoLiquidityMiningNft {
         _mintNftsGivenTiers(nftQtyArr, user);
 
         // Refund leftover rewards as Pendle tokens to user.
-        if (leftoverRewardPoints != 0) {
-            IERC20(pendleTokenAddress).safeTransfer(user, leftoverRewardPoints);
-        }
+        // if (leftoverRewardPoints != 0) {
+        //     IERC20(pendleTokenAddress).safeTransfer(user, leftoverRewardPoints);
+        // }
 
         return (nftQtyArr, leftoverRewardPoints);
     }
@@ -140,6 +153,11 @@ contract CryptoDiptoLiquidityMiningNft {
      */
     function setUserBalance(address user, uint256 newBalance) public {
         userBalances[user] = newBalance;
+    }
+    
+    // function to get created user's balance (for testing)
+    function getUserBalance(address user) public view returns (uint256){
+        return userBalances[user];
     }
 
     /**
