@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
-// import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol';
-// import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 
 
@@ -33,11 +32,21 @@ contract ExampleNft is ERC721URIStorage {
         require(msg.sender == owner, 'Not owner');
         _;
     }
-
+    
+    /**
+     * @notice This function allows only the deployer of this contract to change the base URI of the NFT.
+     * @param newBaseUri the new base URI.
+     */
     function setBaseUri(string memory newBaseUri) public onlyOwner {
         pendlePartnerBaseUri = newBaseUri;
     }
 
+    /**
+     * @notice This function handles the minting of a new NFT by incrementing token ID and minting the NFT to the user.
+     * @param user the address of the user to mint to
+     * @param qty the number of NFT tokens of tier _tier_ to mint
+     * @param tier the tier of NFT tokens to mint
+     */
     function mintTokens(address user, uint256 qty, uint256 tier)
         public
     {
@@ -45,13 +54,19 @@ contract ExampleNft is ERC721URIStorage {
             _tokenIds.increment();
         
             uint256 newItemId = _tokenIds.current();
-            // _mint(user, newItemId);
-            // _setTokenURI(newItemId, _concatenate(pendlePartnerBaseUri, _uint2str(tier)));   
+            _mint(user, newItemId);
+            _setTokenURI(newItemId, _concatenate(pendlePartnerBaseUri, _uint2str(tier)));   
             addressToTokenIds[user].push(newItemId);
             tokenIDToTier[newItemId] = tier;
         }
     }
-
+    
+    /**
+     * @notice This function is public and gets the array of quantity of each NFT tier that a given user address is entitled to
+     * @dev This function is called in test file cryptodipto.spec.ts
+     * @param user ETH address of the user whose eligible NFT tier counts we want to get
+     * @return Array of quantities of each NFT tier that given user is entitled to
+     */
     function getUserNftTierCounts(address user) public view returns (uint256[] memory) {
         uint256[] memory tierCounts = new uint256[](3);
 

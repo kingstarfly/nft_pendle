@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.0;
 
+
+import './ExampleERC20.sol';
+import './ExampleNft.sol';
+
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
-import './ExampleNft.sol';
+
+import 'hardhat/console.sol';
 
 /**
 @author All functionality in this contract is created by Team CryptoDipto.
@@ -17,14 +18,17 @@ import './ExampleNft.sol';
 
 contract CryptoDiptoLiquidityMiningNft {
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
-
     // ================================= CryptoDipto functions for NFT Rewards =================================
     address public pendlePartnerNftAddress;
     address public pendleTokenAddress;
     address public owner;
 
-    mapping(address => uint256) public userBalances;
+    // Note: Maps the i+1-th tier to a certain cut off point for each index i in the array.
+    // E.g. Using an example of cutoffPoints = [1000, 500, 100];
+    // E.g. Array index 0 refers to tier 1 NFT with a cut off point of 1000 (_cutOffPoints[0]).
+    uint256[] internal _cutOffPoints;
+
+    mapping(address => uint256) private _userBalances;
 
     modifier onlyOwner() {
         require(msg.sender == owner, 'Not owner');
@@ -36,21 +40,26 @@ contract CryptoDiptoLiquidityMiningNft {
         owner = msg.sender;
     }
 
+    /**
+     * @notice This function is public and sets the address of the Pendle NFT contract, to be used in transfers to users redeeming NFT rewards.
+     * @dev This function is called ONLY by the owner of the contract, which is the initializer of this contract.
+     * @param tokenAddr ETH address of the Pendle ERC721 Token Contract.
+     */
     function setERC721Address(address tokenAddr) public onlyOwner {
         pendlePartnerNftAddress = tokenAddr;
     }
 
+    /**
+     * @notice This function is public and sets the address of the Pendle token contract, to be used in transfers to users redeeming ERC20 rewards.
+     * @dev This function is called ONLY by the owner of the contract, which is the initializer of this contract.
+     * @param tokenAddr ETH address of the Pendle ERC20 Token Contract.
+     */
     function setERC20Address(address tokenAddr) public onlyOwner {
         pendleTokenAddress = tokenAddr;
     }
 
     /**
      * @notice This function is external and allows users to redeem their Pendle rewards in the form of NFTs, with the remainder being Reward Tokens.
-     * @dev Conditions:
-     * only be called if the contract has been funded.
-     * must have Reentrancy protection
-     * only be called if 0 < current epoch (always can withdraw)
-     * Anyone can call it (and claim it for any other user)
      * @param user ETH address of the user to query existing total rewards.
      * @return Quantities of each NFT Reward Tier user is entitled to, in an array, as well as the remaining Reward Points.
      */
@@ -67,24 +76,18 @@ contract CryptoDiptoLiquidityMiningNft {
 
         // 2. deduct balance to 0 (to protect from re-entrancy attacks.)
         // _beforeTransferPendingRewards(user);
-        userBalances[user] = 0;
+        _userBalances[user] = 0;
 
         // Note: nftQtyArr may be something like [5, 3, 1] indicating 5 x tier 1, 3 x tier 2 and 1 x tier 3 NFT to be minted
         _mintNftsGivenTiers(nftQtyArr, user);
 
         // Refund leftover rewards as Pendle tokens to user.
-        // if (leftoverRewardPoints != 0) {
-        //     IERC20(pendleTokenAddress).safeTransfer(user, leftoverRewardPoints);
-        // }
+        if (leftoverRewardPoints != 0) {
+            ExampleERC20(pendleTokenAddress).transferTokenFromContract(user, leftoverRewardPoints);
+        }
 
         return (nftQtyArr, leftoverRewardPoints);
     }
-
-
-    // Note: Maps the i+1-th tier to a certain cut off point for each index i in the array.
-    // E.g. Using an example of cutoffPoints = [1000, 500, 100];
-    // E.g. Array index 0 refers to tier 1 NFT with a cut off point of 1000 (cutOffPoints[0]).
-    uint256[] cutOffPoints;
 
     /**
      * @notice This function is internal and mints the NFTs that a user is entitled to on redeeming his/her rewards.
@@ -129,21 +132,21 @@ contract CryptoDiptoLiquidityMiningNft {
             }
         }
         return amountOut;
-        */
+        **/
         
-        // returns user's balance
-        return userBalances[user];
+        // Simply returns user's balance in the simplified version.
+        return _userBalances[user];
     }
 
     
-    // Lets governing personnel to update cutoff points for different tiers
+    // 
     /**
-     * Note: Actual contract to have onlyGovernance modifier for this function
-     * @notice This function is public and used to modify a user's balances, and is STRICTLY meant for this testing environment only.
+     * @notice Enables governing personnel to update cutoff points for different tiers. 
      * @param newCutOffPoints New array of cut off points after this function
+     * Note:  Actual contract to have onlyGovernance modifier for this function
      */
-    function setCutOffPoints(uint256[] memory newCutOffPoints) public {
-        cutOffPoints = newCutOffPoints;
+    function setCutOffPoints(uint256[] memory newCutOffPoints) public onlyOwner {
+        _cutOffPoints = newCutOffPoints;
     }
     
     /**
@@ -152,12 +155,15 @@ contract CryptoDiptoLiquidityMiningNft {
      * @param newBalance New balance of the user after the function is called
      */
     function setUserBalance(address user, uint256 newBalance) public {
-        userBalances[user] = newBalance;
+        _userBalances[user] = newBalance;
     }
     
-    // function to get created user's balance (for testing)
+    /**
+     * @notice This function is public and used to view a user's balances.
+     * @param user ETH address of the user to view reward balances.
+     */
     function getUserBalance(address user) public view returns (uint256){
-        return userBalances[user];
+        return _userBalances[user];
     }
 
     /**
@@ -172,13 +178,13 @@ contract CryptoDiptoLiquidityMiningNft {
         returns (uint256[] memory, uint256)
     {
         // initialize variables and get reward points that user currently has
-        uint256 rewardPoints = userBalances[user];
+        uint256 rewardPoints = _userBalances[user];
         // uint256[] storage nftQtyArr;
-        uint256[] memory nftQtyArr = new uint256[](cutOffPoints.length);
+        uint256[] memory nftQtyArr = new uint256[](_cutOffPoints.length);
 
-        for (uint256 i = 0; i < cutOffPoints.length; i++) {
-            nftQtyArr[i] = rewardPoints.div(cutOffPoints[i]); // integer division rounds down
-            rewardPoints = rewardPoints.mod(cutOffPoints[i]); // get remainder (rewardPoints after current tier)
+        for (uint256 i = 0; i < _cutOffPoints.length; i++) {
+            nftQtyArr[i] = rewardPoints.div(_cutOffPoints[i]); // integer division rounds down
+            rewardPoints = rewardPoints.mod(_cutOffPoints[i]); // get remainder (rewardPoints after current tier)
         }
 
         /*

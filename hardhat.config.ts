@@ -10,6 +10,8 @@ import 'hardhat-deploy';
 import 'hardhat-contract-sizer';
 import { removeConsoleLog } from 'hardhat-preprocessor';
 import { nodeUrl, accounts } from './utils/network';
+import { ethers } from 'hardhat';
+import { utils } from 'ethers';
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -59,11 +61,22 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      gasPrice: 50954251693,
       chainId: 1337, // temporary for MetaMask support: https://github.com/MetaMask/metamask-extension/issues/10290
       forking: {
         url: nodeUrl('mainnet'),
         blockNumber: 13000000, // (Aug-10-2021 09:53:39 PM +UTC) post London fork
       },
+      accounts: [
+        {
+          privateKey: '0xc5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122', // cryptodipto
+          balance: utils.parseEther('1000').toString(),
+        },
+        {
+          privateKey: '0xc5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199121', // alice
+          balance: utils.parseEther('1000').toString(),
+        },
+      ],
     },
     localhost: {
       url: nodeUrl('localhost'),
