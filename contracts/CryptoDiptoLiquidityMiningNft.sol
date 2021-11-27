@@ -67,6 +67,9 @@ contract CryptoDiptoLiquidityMiningNft {
         external
         returns (uint256[] memory, uint256)
     {
+        // Only user can redeem for themselves
+        require(msg.sender == user, 'not authorized');
+
         // Deduct reward points from user now.
         uint256[] memory nftQtyArr;
         uint256 leftoverRewardPoints;
@@ -75,7 +78,6 @@ contract CryptoDiptoLiquidityMiningNft {
         (nftQtyArr, leftoverRewardPoints) = checkNftRewards(user);
 
         // 2. deduct balance to 0 (to protect from re-entrancy attacks.)
-        // _beforeTransferPendingRewards(user);
         _userBalances[user] = 0;
 
         // Note: nftQtyArr may be something like [5, 3, 1] indicating 5 x tier 1, 3 x tier 2 and 1 x tier 3 NFT to be minted

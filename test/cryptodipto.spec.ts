@@ -111,7 +111,7 @@ describe('CryptoDipto Liquidity Mining With NFT Rewards', () => {
       // let userNftTierCounts = await exampleNft.getUserNftTierCounts(alice.address);
       // expect(userNftTierCounts.map((bignum) => bignum.toNumber())).to.deep.equal([0, 0, 0]);
 
-      await smartContract.redeemNftRewards(alice.address);
+      await smartContract.connect(alice).redeemNftRewards(alice.address);
 
       let expectedTierCounts = [];
       let rewardPoints = initialRewardPoints;
