@@ -1,10 +1,8 @@
 import chai, { expect } from 'chai';
 import { ethers, waffle } from 'hardhat';
 const { solidity } = waffle;
-import { Contract } from '@ethersproject/contracts';
 import { BigNumber } from '@ethersproject/bignumber';
 import { CryptoDiptoLiquidityMiningNft, ExampleERC20, ExampleNft } from '@typechained';
-// import { ExampleNft } from '@typechained';
 
 chai.use(solidity);
 
@@ -14,8 +12,8 @@ describe('CryptoDipto Liquidity Mining With NFT Rewards', () => {
   1. setUserBalance -> returns the balance of the user (int) 
   2. checkNftRewards -> returns (nftQtyArr, leftoverRewardPoints) -> set user's balance first, check that it is equal to expected amount
   3. redeemNftRewards -> returns (nftQtyArr, leftoverRewardPoints) -> check user balances before and after mint step
-    a. Check nft qty
-    b. Check ERC20 tokens;
+    3a. Check nft qty
+    3b. Check ERC20 tokens;
 */
 
   let exampleERC721: ExampleNft;
@@ -50,14 +48,14 @@ describe('CryptoDipto Liquidity Mining With NFT Rewards', () => {
   });
 
   describe('#setUserBalance', () => {
-    it('should correct set the balance of a user (alice)', async () => {
+    it('should correctly set the balance of a user', async () => {
       const [_, alice] = await ethers.getSigners();
-      const newBalance: number = 100;
+      const newBalance = 100;
 
       // Create the user and store value of 100
       await smartContract.setUserBalance(alice.address, newBalance);
 
-      // expect that cryptoDiptoTeam's balance is 100
+      // Expect that alice's balance is 100
       expect(await smartContract.getUserBalance(alice.address)).to.equal(newBalance);
     });
   });
@@ -67,16 +65,27 @@ describe('CryptoDipto Liquidity Mining With NFT Rewards', () => {
       const [_, alice] = await ethers.getSigners();
 
       // 1. set tiers
-      await smartContract.setCutOffPoints([13, 7, 3]); // prime numbers for reward tiers to test various remainder values
+      await smartContract.setCutOffPoints(cutOffPoints); // prime numbers for reward tiers to test various remainder values
 
       // 2. set user reward points
       await smartContract.setUserBalance(alice.address, 100);
     });
+
     it('should return the correct quantities and tiers of NFTs to mint', async () => {
       const [__, alice] = await ethers.getSigners();
       // 3. checkNftRewards for the user, returning the nftQtyArr and rewardPoints
       const [nftQtyArr, _] = await smartContract.checkNftRewards(alice.address);
-      expect(nftQtyArr.map((bignum: BigNumber) => bignum.toNumber())).to.deep.equal([7, 1, 0]);
+
+      let expectedTierCounts = [];
+      let rewardPoints = initialRewardPoints;
+      for (let points of cutOffPoints) {
+        expectedTierCounts.push(Math.floor(rewardPoints / points));
+        rewardPoints = rewardPoints % points;
+      }
+
+      expect(nftQtyArr.map((bignum: BigNumber) => bignum.toNumber())).to.deep.equal(
+        expectedTierCounts
+      );
     });
 
     it('should return the correct number of leftover reward points', async () => {
@@ -132,7 +141,7 @@ describe('CryptoDipto Liquidity Mining With NFT Rewards', () => {
 
       const erc20BalanceBefore = await exampleERC20.getBalance(alice.address);
 
-      await smartContract.redeemNftRewards(alice.address);
+      await smartContract.connect(alice).redeemNftRewards(alice.address);
 
       const erc20BalanceAfter = await exampleERC20.getBalance(alice.address);
 
