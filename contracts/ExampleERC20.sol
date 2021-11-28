@@ -14,7 +14,7 @@ contract ExampleERC20 {
     }
 
     function transferTokenFromContract(address recipient, uint256 amount) public virtual returns (bool) {
-        require(balances[address(this)] > amount, 'contract has insufficient balance');
+        require(balances[address(this)] > amount, 'insufficient contract balance');
         balances[address(this)] -= amount; 
         balances[recipient] += amount; 
         return true;
